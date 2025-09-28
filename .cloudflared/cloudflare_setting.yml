@@ -1,0 +1,100 @@
+# install ttyd
+```bash
+apt install -y ttyd
+```
+
+# Create systed service
+```bash
+sudo tee /etc/systemd/system/ttyd.serviced > /dev/null <<EOF
+[Unit]
+Description=ttyd - Terminal over HTTP
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/user/bin/ttyd -p 7681 -i 0.0.0.0 bash
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+# Service enable/start
+```bash
+systemctl enable ttyd
+systemctl start ttyd
+systemctl status ttyd
+```
+
+# Create DNS Record
+```bash
+cloudflared tunnel route dns homelab-new-tunnel ssh.shooonng.com
+cloudflared tunnel route dns homelab-new-tunnel terminal.shooonng.com
+cloudflared tunnel route dns homelab-new-tunnel grafana.shooonng.com
+cloudflared tunnel route dns homelab-new-tunnel prometheus.shooonng.com
+```
+
+# Verification of configure file
+```bash
+cloudflared tunnel ingress validate
+```
+
+# Test tunnel run
+```bash
+cloudflared tunnel run homelab-new-tunnel
+```
+
+```bash
+cloudflared tunnel create homelab-new-tunnel
+```
+
+# サービスとして登録
+```bash
+cloudflared service install
+```
+
+# サービス有効化・開始
+```bash
+systemctl enable cloudflared
+systemctl start cloudflared
+```
+
+# 状態確認
+```bash
+systemctl status cloudflared
+```
+
+```bash
+sudo tee /etc/systemd/system/cloudflared.service > /dev/null <<EOF
+[Unit]
+Description=cloudflared
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/cloudflared tunnel run homelab-new-tunnel
+WorkingDirectory=/root/.cloudflared
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+```bash
+chmod 644 /etc/systemd/system/cloudflared.service
+
+systemctl daemon-reload
+
+systemctl enable cloudflared
+systemctl start cloudflared
+
+systemctl status cloudflared
+
+journalctl -u cloudflared -f
+```
+
