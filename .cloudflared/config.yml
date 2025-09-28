@@ -1,0 +1,21 @@
+tunnel: homelab-tunnel
+credentials-file: ~/.cloudflared/396519b1-1e1d-469f-8fb2-c1ba00d15b0f.json
+
+ingress:
+  # SSH over WebSocket
+  - hostname: ssh.shooonng.com
+    service: ssh://192.168.3.13:22
+
+  # Web-based Terminal
+  - hostname: terminal.shooonng.com
+    service: http://192.168.3.15:7681
+
+  # Monitering
+  - hostname: grafana.shooonng.com
+    service: http://192.168.3.15:3000
+
+  - hostname: prometheus.shooonng.com
+    service: http://192.168.3.15:9090
+
+  # Catch all
+  - service: http_status:404
