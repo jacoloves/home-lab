@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-cloudflare
+spec:
+  acme:
+    # 本番。レート制限が厳しいので、最初は staging で疎通確認するのも可:
+    # 一回疎通確認する
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    # server: https://acme-v02.api.letsencrypt.org/directory
+    email: 5511068t@gmail.com
+    privateKeySecretRef:
+      # ACME アカウント秘密鍵の保存先（cert-manager が自動生成）
+      name: letsencrypt-cloudflare-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+        # このゾーンに対してのみ DNS-01 を使う（複数 issuer 併用時の取り違え防止）
+        selector:
+          dnsZones:
+            - shooonng.com
+
