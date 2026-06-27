@@ -6,8 +6,8 @@ spec:
   acme:
     # 本番。レート制限が厳しいので、最初は staging で疎通確認するのも可:
     # 一回疎通確認する
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    # server: https://acme-v02.api.letsencrypt.org/directory
+    # server: https://acme-staging-v02.api.letsencrypt.org/directory
+    server: https://acme-v02.api.letsencrypt.org/directory
     email: 5511068t@gmail.com
     privateKeySecretRef:
       # ACME アカウント秘密鍵の保存先（cert-manager が自動生成）
