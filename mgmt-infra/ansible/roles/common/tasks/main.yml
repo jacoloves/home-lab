@@ -47,3 +47,18 @@
     - suspend.target
     - hibernate.target
     - hybrid-sleep.target
+
+- name: ネットワーク設定の自動生成を無効化する(cloud-init)
+  # cloud-init が生成する 50-cloud-init.yaml が dhcp4:true で
+  # netplan の静的IP設定を上書きしてしまうため、生成自体を止める
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    mode: "0644"
+    owner: root
+    group: root
+    content: "network: {config: disabled}\n"
+
+- name: 自動生成された netplan 設定を削除する
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent

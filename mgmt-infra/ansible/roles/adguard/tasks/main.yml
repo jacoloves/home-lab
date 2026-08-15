@@ -1,0 +1,45 @@
+# AdGuard Home(内部DNS)の管理
+#
+# 方針: 設定内容(AdGuardHome.yaml)は GUI 側で管理し、
+#       このロールでは導入・systemd-resolved の調整・サービス稼働のみを担保する。
+#       設定が安定したら template 化して宣言的管理へ移行する。
+---
+- name: スタブリスナーを無効化する(systemd-resolved)
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/adguard.conf
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      # AdGuard Home が 53番ポートを使用するため、スタブリスナーを無効化する
+      [Resolve]
+      DNSStubListener=no
+  notify: Restart systemd-resolved
+
+- name: シンボリックリンクを resolved の実体ファイルに張り替える
+  ansible.builtin.file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: true
+
+- name: AdGuard Home が導入済みか確認する
+  ansible.builtin.stat:
+    path: /opt/AdGuardHome/AdGuardHome
+  register: adguard_binary
+
+# 導入は公式スクリプトに委ねる(初回のみ)
+- name: AdGuard Home を導入する
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/scripts/install.sh | sh -s -- -v
+  args:
+    executable: /bin/bash
+  when: not adguard_binary.stat.exists
+  changed_when: true
+
+- name: AdGuard Home サービスを有効化する
+  ansible.builtin.systemd:
+    name: AdGuardHome
+    enabled: true
+    state: started
