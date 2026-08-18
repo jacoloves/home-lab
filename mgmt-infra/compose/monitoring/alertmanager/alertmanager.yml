@@ -1,0 +1,20 @@
+# Alertmanager 設定
+# 通知先は未決のため、現時点では受信・集約のみ行う。
+# Slack / Discord / メール等への連携は決定後に receivers へ追加する。
+route:
+  group_by: ['alertname', 'instance']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'null'
+
+receivers:
+  - name: 'null'
+
+inhibit_rules:
+  # ホストごと落ちている場合、個別サービスの警告は抑制する
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ['instance']

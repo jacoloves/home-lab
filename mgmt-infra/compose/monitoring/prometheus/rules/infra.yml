@@ -1,0 +1,62 @@
+# インフラ層のアラートルール
+groups:
+  - name: availability
+    rules:
+      - alert: HostDown
+        # ICMP が 5 分間応答しない
+        expr: probe_success{job="blackbox-icmp"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ホスト {{ $labels.instance }} が応答しません"
+          description: "5分以上 ICMP に応答していません。"
+
+      - alert: ServiceDown
+        expr: probe_success{job="blackbox-tcp"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "サービス {{ $labels.instance }} に接続できません"
+
+      - alert: ExporterDown
+        # スクレイプ自体が失敗している(exporter の停止など)
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "スクレイプ対象 {{ $labels.instance }} が停止しています"
+
+  - name: resources
+    rules:
+      - alert: DiskSpaceLow
+        # 今回の教訓: ディスク枯渇は前兆があり、これは確実に防げる
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"}
+           / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"}) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} の {{ $labels.mountpoint }} の空きが15%未満です"
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"}
+           / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"}) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} の {{ $labels.mountpoint }} の空きが5%未満です"
+
+      - alert: MemoryPressure
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} の空きメモリが10%未満です"

@@ -1,0 +1,15 @@
+# ダッシュボードのファイル読み込み設定
+# /var/lib/grafana/dashboards 配下の JSON を自動で取り込む
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

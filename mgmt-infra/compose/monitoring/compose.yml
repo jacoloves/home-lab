@@ -1,0 +1,79 @@
+# 管理ホストの監視スタック
+# Prometheus + Grafana + Alertmanager + node_exporter
+#
+# ポート公開はバインドアドレスを明示する。
+# Docker は iptables を直接操作し UFW を迂回するため、
+# 公開範囲はここで制御する必要がある。
+name: monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: prometheus
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # 保存期間とサイズの上限を明示する(ディスク枯渇の予防)
+      - --storage.tsdb.retention.time=90d
+      - --storage.tsdb.retention.size=30GB
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    container_name: alertmanager
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    container_name: grafana
+    restart: unless-stopped
+    user: "472:472"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      # 匿名アクセスとサインアップを無効化する
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://192.168.3.11:3000
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "192.168.3.11:3000:3000"
+    depends_on:
+      - prometheus
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.26.0
+    container_name: blackbox
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox/blackbox.yml
+    volumes:
+      - ./blackbox:/etc/blackbox:ro
+    # ICMP には raw socket が必要
+    cap_add:
+      - NET_RAW
+    ports:
+      - "127.0.0.1:9115:9115"
+
+volumes:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:

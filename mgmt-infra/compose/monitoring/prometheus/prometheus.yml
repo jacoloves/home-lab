@@ -1,0 +1,67 @@
+# Prometheus 設定
+#
+# 現時点の監視対象:
+#   - 管理ホスト自身(node_exporter)
+#   - Proxmox ホストの死活(blackbox exporter 経由)
+# クラスタ層(Alloy からの remote_write)と Proxmox の詳細メトリクスは
+# それぞれ復旧・NVMe交換の後に追加する。
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    env: homelab
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: node
+    static_configs:
+      - targets: ['192.168.3.11:9100']
+        labels:
+          instance: mgmt
+
+  # 死活監視(ICMP)。監視対象への変更を伴わない。
+  - job_name: blackbox-icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets:
+          - 192.168.3.100   # proxmox-home
+          - 192.168.3.1     # ルーター
+    relabel_configs:
+      # 実際の宛先を target パラメータとして blackbox に渡す
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # ポート単位の死活監視。ICMP は通るがサービスが死んでいる状態を拾う。
+  - job_name: blackbox-tcp
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+          - 192.168.3.100:8006   # Proxmox Web UI
+          - 192.168.3.100:22     # SSH
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
