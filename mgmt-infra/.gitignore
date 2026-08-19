@@ -19,3 +19,6 @@ secrets.yml
 .DS_Store
 *.swp
 .env
+
+# Alertmanager の通知先シークレット
+compose/monitoring/alertmanager/secrets/

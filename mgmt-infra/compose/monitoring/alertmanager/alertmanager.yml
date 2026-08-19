@@ -1,15 +1,51 @@
 # Alertmanager 設定
-# 通知先は未決のため、現時点では受信・集約のみ行う。
-# Slack / Discord / メール等への連携は決定後に receivers へ追加する。
+# 通知先は Slack Incoming Webhook。
+# URL は secrets/slack_api_url から読み込む(リポジトリには含めない)。
+global:
+  slack_api_url_file: /etc/alertmanager/secrets/slack_api_url
+  resolve_timeout: 5m
+
 route:
   group_by: ['alertname', 'instance']
+  # 同一グループの初回通知までの待機時間
   group_wait: 30s
+  # 同一グループに新規アラートが増えたときの通知間隔
   group_interval: 5m
+  # 未解決アラートの再通知間隔。短すぎると通知疲れを起こす
   repeat_interval: 12h
-  receiver: 'null'
+  receiver: slack-warning
+
+  routes:
+    # critical は再通知を短くし、見落としを防ぐ
+    - matchers:
+        - severity = "critical"
+      receiver: slack-critical
+      repeat_interval: 4h
 
 receivers:
-  - name: 'null'
+  - name: slack-warning
+    slack_configs:
+      - channel: '#homelab-alerts'
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}⚠️{{ else }}✅{{ end }} [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+        text: |-
+          {{ range .Alerts }}
+          *対象:* {{ .Labels.instance }}
+          *概要:* {{ .Annotations.summary }}
+          {{ if .Annotations.description }}*詳細:* {{ .Annotations.description }}{{ end }}
+          {{ end }}
+
+  - name: slack-critical
+    slack_configs:
+      - channel: '#homelab-alerts'
+        send_resolved: true
+        title: '{{ if eq .Status "firing" }}🚨{{ else }}✅{{ end }} [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+        text: |-
+          {{ range .Alerts }}
+          *対象:* {{ .Labels.instance }}
+          *概要:* {{ .Annotations.summary }}
+          {{ if .Annotations.description }}*詳細:* {{ .Annotations.description }}{{ end }}
+          {{ end }}
 
 inhibit_rules:
   # ホストごと落ちている場合、個別サービスの警告は抑制する

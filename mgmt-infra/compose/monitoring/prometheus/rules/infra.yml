@@ -60,3 +60,23 @@ groups:
           severity: warning
         annotations:
           summary: "{{ $labels.instance }} の空きメモリが10%未満です"
+
+  - name: services
+    rules:
+      - alert: AdGuardHomeDown
+        # 内部DNSが落ちると家庭内の名前解決に影響が出る
+        expr: node_systemd_unit_state{name="AdGuardHome.service",state="active"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AdGuard Home が停止しています"
+          description: "内部DNSが応答しません。名前解決に影響が出ます。"
+
+      - alert: DockerDown
+        expr: node_systemd_unit_state{name="docker.service",state="active"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Docker が停止しています"
