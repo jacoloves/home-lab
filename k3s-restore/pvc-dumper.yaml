@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-dumper
+  namespace: nextcloud
+spec:
+  restartPolicy: Never
+  containers:
+    - name: dumper
+      image: debian:bookworm-slim
+      command: ["sleep", "3600"]
+      volumeMounts:
+        - name: src          # 移行元 PVC(読み取り専用)
+          mountPath: /src
+          readOnly: true
+        - name: dst          # mgmt host の NFS
+          mountPath: /dst
+  volumes:
+    - name: src
+      persistentVolumeClaim:
+        claimName: nextcloud-data
+    - name: dst
+      nfs:
+        server: 192.168.3.11
+        path: /srv/k8s-migration
