@@ -1,0 +1,13 @@
+# 管理ホストの構成管理
+#
+# 実行:
+#   make check   # dry-run
+#   make apply   # 適用
+---
+- name: 管理ホストの構成
+  hosts: mgmt
+  become: true
+  roles:
+    - common
+    - docker
+    - adguard

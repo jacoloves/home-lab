@@ -1,0 +1,24 @@
+# Ansible
+*.retry
+ansible/collections/
+.vault_pass
+
+# OpenTofu / Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# 機密情報
+*.pem
+*.key
+secrets.yml
+
+# エディタ
+.DS_Store
+*.swp
+.env
+
+# Alertmanager の通知先シークレット
+compose/monitoring/alertmanager/secrets/

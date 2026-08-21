@@ -1,0 +1,78 @@
+# Docker Engine と Compose plugin の導入
+---
+- name: 前提パッケージを導入する
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: APT キーリング用ディレクトリを作成する
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Docker の GPG 鍵を取得する
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+  check_mode: false
+
+# deb822 形式で登録する(旧 apt_repository は 2.25 で削除予定)
+- name: Docker の APT リポジトリを登録する
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: https://download.docker.com/linux/ubuntu
+    suites: "{{ ansible_distribution_release }}"
+    components: [stable]
+    architectures: "{{ ansible_architecture | replace('x86_64', 'amd64') }}"
+    signed_by: /etc/apt/keyrings/docker.asc
+    enabled: true
+    state: present
+  check_mode: false
+
+- name: Docker 本体を導入する
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+# デフォルトの json-file ドライバはログを無制限に蓄積する。
+# 監視スタックを常時稼働させるため、必ずローテーションを設定する
+- name: Docker デーモンのログローテーションを設定する
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "{{ docker_log_max_size }}",
+          "max-file": "{{ docker_log_max_file }}"
+        }
+      }
+  notify: Restart docker
+
+- name: Docker サービスを有効化する
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: 実行ユーザーを docker グループに追加する
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: true

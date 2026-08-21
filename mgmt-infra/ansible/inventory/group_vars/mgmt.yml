@@ -1,0 +1,19 @@
+# 管理ホスト共通の変数
+---
+# タイムゾーン
+mgmt_timezone: Asia/Tokyo
+
+# 全ホストに導入する基本パッケージ
+mgmt_common_packages:
+  - vim
+  - htop
+  - tree
+  - jq
+  - net-tools
+  - dnsutils
+  - unattended-upgrades
+
+# Docker のログローテーション設定
+# 監視スタックを長期稼働させるため、ログの無制限な肥大化を防ぐ
+docker_log_max_size: "10m"
+docker_log_max_file: "3"

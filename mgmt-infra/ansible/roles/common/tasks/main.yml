@@ -1,0 +1,64 @@
+# 管理ホストの共通設定
+---
+- name: タイムゾーンを設定する
+  community.general.timezone:
+    name: "{{ mgmt_timezone }}"
+  notify: Restart cron
+
+- name: 基本パッケージを導入する
+  ansible.builtin.apt:
+    name: "{{ mgmt_common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: 時刻同期(systemd-timesyncd)を有効化する
+  ansible.builtin.systemd:
+    name: systemd-timesyncd
+    enabled: true
+    state: started
+
+# 24時間稼働のホストのため、セキュリティ更新は自動適用する。
+# ただし自動再起動はしない(監視基盤の停止を避けるため手動判断とする)
+- name: 自動セキュリティ更新を設定する
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+
+- name: 自動再起動を無効化する
+  ansible.builtin.lineinfile:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+    regexp: '^(//)?Unattended-Upgrade::Automatic-Reboot\s'
+    line: 'Unattended-Upgrade::Automatic-Reboot "false";'
+    state: present
+
+- name: スリープ関連ターゲットを無効化する
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    masked: true
+  loop:
+    - sleep.target
+    - suspend.target
+    - hibernate.target
+    - hybrid-sleep.target
+
+- name: ネットワーク設定の自動生成を無効化する(cloud-init)
+  # cloud-init が生成する 50-cloud-init.yaml が dhcp4:true で
+  # netplan の静的IP設定を上書きしてしまうため、生成自体を止める
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    mode: "0644"
+    owner: root
+    group: root
+    content: "network: {config: disabled}\n"
+
+- name: 自動生成された netplan 設定を削除する
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
