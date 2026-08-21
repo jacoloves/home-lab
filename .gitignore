@@ -1,0 +1,17 @@
+# Terraform / OpenTofu
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Ansible
+*.retry
+ansible/inventory.yml
+
+# 認証情報全般
+*.auto.pkrvars.hcl
+*.key
+*.pem
