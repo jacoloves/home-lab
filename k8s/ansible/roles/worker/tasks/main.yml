@@ -1,0 +1,6 @@
+# worker ノードのクラスタ参加
+---
+- name: クラスタに参加する
+  ansible.builtin.command:
+    cmd: "{{ hostvars[groups['control_plane'][0]]['k8s_join_command'] }}"
+    creates: /etc/kubernetes/kubelet.conf

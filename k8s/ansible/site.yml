@@ -11,3 +11,15 @@
     - common
     - containerd
     - kubernetes
+
+- name: control-plane の初期化
+  hosts: control_plane
+  become: true
+  roles:
+    - control_plane
+
+- name: worker のクラスタ参加
+  hosts: workers
+  become: true
+  roles:
+    - worker
