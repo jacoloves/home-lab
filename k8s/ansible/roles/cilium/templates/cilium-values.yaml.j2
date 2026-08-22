@@ -1,0 +1,39 @@
+# Cilium の設定。
+# Pod CIDR は kubeadm の podSubnet と一致させる必要がある。
+# 両者の定義元は group_vars/all.yml に集約している。
+
+# 初回は kube-proxy を残したまま導入する。
+# kubeadm 自体が初めての環境に eBPF のデータパス置換を同時に持ち込むと、
+# Service に到達できないときの切り分けが困難になるため。
+# クラスタが安定したあと、別作業として true に切り替える。
+kubeProxyReplacement: false
+
+# kube-proxy 経由の解決に依存せず API サーバへ直接到達させる。
+# 起動時のニワトリ卵問題を避けるための指定。
+k8sServiceHost: {{ k8s_control_plane_ip }}
+k8sServicePort: 6443
+
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+      - {{ k8s_pod_cidr }}
+    # /24 ずつノードに割り当てる(1ノードあたり最大254 Pod)
+    clusterPoolIPv4MaskSize: 24
+
+# 単一の L2 セグメント上なのでネイティブルーティングも選べるが、
+# まずは前提の少ない VXLAN で確実に動かす。
+routingMode: tunnel
+tunnelProtocol: vxlan
+
+operator:
+  # 既定は2だが、3ノードの homelab では1で十分
+  replicas: 1
+
+# 通信の可視化。Cilium を選んだ主目的のひとつ。
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true

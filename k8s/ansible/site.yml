@@ -17,6 +17,7 @@
   become: true
   roles:
     - control_plane
+    - cilium
 
 - name: worker のクラスタ参加
   hosts: workers

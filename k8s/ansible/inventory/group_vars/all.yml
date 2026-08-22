@@ -33,3 +33,12 @@ k8s_control_plane_ip: "192.168.3.101"
 # containerd が使う pause イメージ。
 # kubeadm が要求する版と揃える(kubeadm config images list で確認できる)
 containerd_pause_image: "registry.k8s.io/pause:3.10.1"
+
+# Cilium
+# バージョンは明示的に固定する。再構築時に別バージョンが入ると
+# 挙動の差分と構成の差分が混ざって切り分けできなくなるため。
+cilium_version: "1.20.1"    # ← 調べた値に置き換える
+
+# Helm 本体。upgrade は creates で抑止されるため、
+# 上げるときは /usr/local/bin/helm を削除してから再適用する。
+helm_version: "3.16.4"
