@@ -1,0 +1,3 @@
+# 実際の値は terraform.tfvars に記述する(gitignore 対象)
+proxmox_endpoint  = "https://<PVEのIP>:8006/"
+proxmox_api_token = "root@pam!<トークンID>=<シークレット>"
