@@ -17,3 +17,5 @@ mgmt_common_packages:
 # 監視スタックを長期稼働させるため、ログの無制限な肥大化を防ぐ
 docker_log_max_size: "10m"
 docker_log_max_file: "3"
+
+mgmt_ip: 192.168.3.11

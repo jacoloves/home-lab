@@ -1,0 +1,45 @@
+# 監視スタック(Prometheus / Grafana / Alertmanager)向けのホスト側設定
+#
+# 責務: node_exporter の導入とコレクタ設定のみ。
+#       Prometheus 等のコンテナは compose/monitoring 配下で管理し、
+#       起動は Makefile の monitoring-up ターゲットから行う。
+---
+- name: パッケージ node_exporter を導入する
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: 設定ディレクトリを作成する(systemd drop-in)
+  ansible.builtin.file:
+    path: /etc/systemd/system/prometheus-node-exporter.service.d
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+# デフォルトでは systemd / processes コレクタが無効で、
+# 待ち受けも 0.0.0.0 になり Tailscale 経由でも公開されてしまう。
+# 管理ホストとしてサービス状態を監視したいため両方を調整する。
+- name: コレクタと待ち受けアドレスを設定する(node_exporter)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/prometheus-node-exporter.service.d/override.conf
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/usr/bin/prometheus-node-exporter \
+        --collector.systemd \
+        --collector.processes \
+        --web.listen-address={{ mgmt_ip }}:9100
+  notify: Restart node exporter
+
+- name: サービス node_exporter を有効化する
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started
+    daemon_reload: true

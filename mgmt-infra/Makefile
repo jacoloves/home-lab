@@ -27,3 +27,12 @@ idempotence: ## 冪等性を確認する(2回目の実行で changed=0 になる
 		|| (echo "NG: 2回目の実行で変更が発生しています" && exit 1)
 
 test: lint check ## lint と dry-run をまとめて実行する
+
+monitoring-up: ## 監視スタックを起動する
+	cd compose/monitoring && docker compose up -d
+
+monitoring-down: ## 監視スタックを停止する
+	cd compose/monitoring && docker compose down
+
+monitoring-logs: ## 監視スタックのログを表示する
+	cd compose/monitoring && docker compose logs -f --tail 50
