@@ -3,7 +3,7 @@ variable "proxmox_endpoint" {
   type        = string
 }
 
-variable "proxmox_apit_token" {
+variable "proxmox_api_token" {
   description = "API トークン(形式: root@pam!<トークンID>=<シークレット>)"
   type        = string
   sensitive   = true
