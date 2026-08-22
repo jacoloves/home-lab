@@ -42,3 +42,12 @@ cilium_version: "1.20.1"    # ← 調べた値に置き換える
 # Helm 本体。upgrade は creates で抑止されるため、
 # 上げるときは /usr/local/bin/helm を削除してから再適用する。
 helm_version: "3.16.4"
+
+# MetalLB
+metallb_version: "0.15.2"    # helm search repo metallb/metallb --versions で確認して固定する
+# LoadBalancer に払い出す IP レンジ。
+# 旧環境と同じ値を使う。DHCP の払い出し範囲と重ならないこと。
+metallb_ip_range: "192.168.3.200-192.168.3.230"
+
+cert_manager_acme_email: "5511068t@gmail.com"
+cert_manager_dns_zone: "shooonng.com"

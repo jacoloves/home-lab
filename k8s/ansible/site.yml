@@ -18,6 +18,7 @@
   roles:
     - control_plane
     - cilium
+    - metallb
 
 - name: worker のクラスタ参加
   hosts: workers

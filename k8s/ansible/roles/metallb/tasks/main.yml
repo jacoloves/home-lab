@@ -1,0 +1,35 @@
+# LoadBalancer の実装(MetalLB)
+---
+- name: MetalLB の Helm リポジトリを登録する
+  kubernetes.core.helm_repository:
+    name: metallb
+    repo_url: https://metallb.github.io/metallb
+
+- name: MetalLB を導入する
+  kubernetes.core.helm:
+    name: metallb
+    chart_ref: metallb/metallb
+    chart_version: "{{ metallb_version }}"
+    release_namespace: metallb-system
+    create_namespace: true
+    kubeconfig: /etc/kubernetes/admin.conf
+    wait: true
+    wait_timeout: 10m
+
+# CRD の適用は controller と webhook が起動してからでないと弾かれるため、
+# Helm の wait: true で起動を待ってから実行する。
+- name: アドレスプールの定義を配置する
+  ansible.builtin.template:
+    src: metallb-pool.yaml.j2
+    dest: /etc/kubernetes/metallb-pool.yaml
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: アドレスプールを適用する
+  ansible.builtin.command: kubectl apply -f /etc/kubernetes/metallb-pool.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: metallb_pool
+  changed_when: >-
+    'created' in metallb_pool.stdout or 'configured' in metallb_pool.stdout
