@@ -46,7 +46,7 @@ resource "proxmox_virtual_environment_vm" "node" {
   }
 
   operating_system {
-    type = "126"
+    type = "l26"
   }
 
   initialization {
@@ -65,8 +65,8 @@ resource "proxmox_virtual_environment_vm" "node" {
     }
 
     user_account {
-      user_name = var.vm_username
-      keys      = [trimspace(file(pathexpand(var.ssh_public_key_path)))]
+      username = var.vm_username
+      keys     = [trimspace(file(pathexpand(var.ssh_public_key_path)))]
     }
   }
 }

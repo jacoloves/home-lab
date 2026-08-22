@@ -12,7 +12,7 @@ variable "proxmox_api_token" {
 variable "proxmox_node" {
   description = "VM を作成する Proxmox ノード名"
   type        = string
-  default     = "proxmox_home"
+  default     = "proxmox-home"
 }
 
 variable "network_bridge" {
