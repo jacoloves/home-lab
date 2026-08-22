@@ -1,0 +1,49 @@
+# CRI ランタイムの構成
+---
+- name: containerd を導入する
+  ansible.builtin.apt:
+    name: containerd
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: 設定ディレクトリを作成する
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: 既定設定を取得する
+  ansible.builtin.command: containerd config default
+  register: containerd_default_config
+  changed_when: false
+  when: not ansible_check_mode
+
+# 既定値をそのまま書いてから別タスクで書き換えると毎回差分が出るため、
+# 書き込む前に置換を済ませることで冪等性を保つ。
+- name: 設定を配置する
+  ansible.builtin.copy:
+    dest: /etc/containerd/config.toml
+    mode: "0644"
+    owner: root
+    group: root
+    # containerd 2.x では pinned_images.sandbox がキー名。
+    # 1.x の sandbox_image とは異なるため、書式変更時はここを見直すこと。
+    content: >-
+      {{
+        containerd_default_config.stdout
+        | regex_replace('SystemdCgroup = false', 'SystemdCgroup = true')
+        | regex_replace("sandbox = 'registry\.k8s\.io/pause:[^']+'",
+                        "sandbox = '" ~ containerd_pause_image ~ "'")
+      }}
+  when: not ansible_check_mode
+  notify: Restart containerd
+
+- name: containerd を有効化する
+  ansible.builtin.systemd:
+    name: containerd
+    enabled: true
+    state: started
+  when: not ansible_check_mode

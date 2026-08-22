@@ -1,0 +1,59 @@
+# kubeadm / kubelet / kubectl の導入
+---
+- name: apt キーリングのディレクトリを作成する
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: リポジトリの署名鍵を取得する
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version_minor }}/deb/Release.key"
+    dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+    mode: "0644"
+    owner: root
+    group: root
+
+# リポジトリはマイナーバージョンごとに分かれている。
+# アップグレード時はこの URL を変更してから apt-mark unhold する。
+- name: apt リポジトリを登録する
+  ansible.builtin.deb822_repository:
+    name: kubernetes
+    types: [deb]
+    uris: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version_minor }}/deb/"
+    suites: ["/"]
+    signed_by: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+    enabled: true
+  notify: Update apt cache
+
+- name: apt キャッシュを更新する
+  ansible.builtin.meta: flush_handlers
+
+- name: kubeadm 一式を導入する
+  ansible.builtin.apt:
+    name:
+      - "kubelet={{ k8s_package_version }}"
+      - "kubeadm={{ k8s_package_version }}"
+      - "kubectl={{ k8s_package_version }}"
+    state: present
+    update_cache: true
+
+# 意図しないタイミングでの更新を防ぐ。
+# アップグレードは kubeadm upgrade の手順に沿って明示的に行う。
+- name: バージョンを固定する
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+- name: kubelet を有効化する
+  # kubeadm init / join を実行するまでは起動失敗を繰り返すが、これは正常
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: true
+  when: not ansible_check_mode

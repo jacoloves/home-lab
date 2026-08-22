@@ -63,7 +63,7 @@ variable "enable_qemu_agent" {
     Ansible で導入したあとに true へ切り替えて再適用する。
   EOT
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "vm_nodes" {

@@ -1,0 +1,13 @@
+# kubeadm クラスタのノード構成管理
+#
+# 実行:
+#   make check   # dry-run
+#   make apply   # 適用
+---
+- name: Kubernetes ノードの共通構成
+  hosts: all
+  become: true
+  roles:
+    - common
+    - containerd
+    - kubernetes

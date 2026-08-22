@@ -1,0 +1,90 @@
+# Kubernetes ノードの共通設定
+---
+- name: タイムゾーンを設定する
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: 基本パッケージを導入する
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: qemu-guest-agent を有効化する
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    enabled: true
+    state: started
+  when: not ansible_check_mode
+
+- name: 時刻同期を有効化する
+  # etcd はノード間の時刻ずれに敏感なため必須
+  ansible.builtin.systemd:
+    name: systemd-timesyncd
+    enabled: true
+    state: started
+
+# kubelet は swap が有効だと起動を拒否する(failSwapOn の既定値が true)。
+# cloud image には swap が無いが、将来追加された場合に備えて明示的に無効化する。
+- name: swap を無効化する
+  ansible.builtin.command: swapoff -a
+  when: ansible_swaptotal_mb | default(0) > 0
+  changed_when: true
+
+- name: fstab から swap のエントリを除去する
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+
+# Pod 間通信のブリッジで netfilter を通すために必要
+- name: カーネルモジュールを起動時に読み込ませる
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      overlay
+      br_netfilter
+  notify: Load kernel modules
+
+- name: カーネルモジュールを即座に読み込む
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+
+- name: ネットワーク関連の sysctl を設定する
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-kubernetes.conf
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+  notify: Apply sysctl
+
+- name: iscsid を有効化する
+  # Longhorn のボリュームアタッチに必要
+  ansible.builtin.systemd:
+    name: iscsid
+    enabled: true
+    state: started
+  when: not ansible_check_mode
+
+# 旧環境では multipathd が Longhorn のデバイスを奪い、
+# ボリュームがアタッチできなくなる問題が発生していた。
+# インストールされていれば無効化する。
+- name: multipathd を無効化する
+  ansible.builtin.systemd:
+    name: multipathd
+    enabled: false
+    state: stopped
+    masked: true
+  failed_when: false
