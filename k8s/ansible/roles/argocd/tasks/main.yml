@@ -1,0 +1,45 @@
+# GitOps コントローラ(ArgoCD)
+#
+# これ以降のアプリケーションは ArgoCD の管轄とし、
+# Ansible では管理しない。
+---
+- name: ArgoCD の Helm リポジトリを登録する
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: https://argoproj.github.io/argo-helm
+
+- name: values ファイルを配置する
+  ansible.builtin.template:
+    src: argocd-values.yaml.j2
+    dest: /etc/kubernetes/argocd-values.yaml
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: ArgoCD を導入する
+  kubernetes.core.helm:
+    name: argocd
+    chart_ref: argo/argo-cd
+    chart_version: "{{ argocd_version }}"
+    release_namespace: argocd
+    values_files:
+      - /etc/kubernetes/argocd-values.yaml
+    kubeconfig: /etc/kubernetes/admin.conf
+    wait: true
+    wait_timeout: 10m
+
+- name: HTTPRoute の定義を配置する
+  ansible.builtin.template:
+    src: argocd-route.yaml.j2
+    dest: /etc/kubernetes/argocd-route.yaml
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: HTTPRoute を適用する
+  ansible.builtin.command: kubectl apply -f /etc/kubernetes/argocd-route.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: argocd_route
+  changed_when: >-
+    'created' in argocd_route.stdout or 'configured' in argocd_route.stdout

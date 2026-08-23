@@ -1,0 +1,56 @@
+# 全アプリ共通の Gateway。
+# アプリごとに Gateway を作ると LoadBalancer IP を消費するため共有する。
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ gateway_namespace }}
+---
+# ワイルドカード証明書。DNS-01 を使うため取得できる。
+# cert-manager の Gateway API 連携はフィーチャーゲートが必要なので使わず、
+# Certificate が作る Secret を listener から参照する形にしている。
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-shooonng
+  namespace: {{ gateway_namespace }}
+spec:
+  secretName: wildcard-shooonng-tls
+  dnsNames:
+    - "{{ gateway_wildcard_hostname }}"
+    - "{{ cert_manager_dns_zone }}"
+  issuerRef:
+    name: letsencrypt-cloudflare
+    kind: ClusterIssuer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared-gateway
+  namespace: {{ gateway_namespace }}
+spec:
+  gatewayClassName: cilium
+  infrastructure:
+    annotations:
+      # Cilium の spec.addresses は自前の LB-IPAM 向けの機能なので、
+      # MetalLB 構成では生成される Service にアノテーションを伝播させる
+      metallb.io/loadBalancerIPs: "{{ gateway_lb_ip }}"
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "{{ gateway_wildcard_hostname }}"
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "{{ gateway_wildcard_hostname }}"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: wildcard-shooonng-tls
+      allowedRoutes:
+        namespaces:
+          from: All

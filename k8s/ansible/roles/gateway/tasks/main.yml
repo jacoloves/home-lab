@@ -1,0 +1,17 @@
+# Gateway API の共有 Gateway
+---
+- name: Gateway の定義を配置する
+  ansible.builtin.template:
+    src: gateway.yaml.j2
+    dest: /etc/kubernetes/gateway.yaml
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Gateway を適用する
+  ansible.builtin.command: kubectl apply -f /etc/kubernetes/gateway.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: gateway_apply
+  changed_when: >-
+    'created' in gateway_apply.stdout or 'configured' in gateway_apply.stdout

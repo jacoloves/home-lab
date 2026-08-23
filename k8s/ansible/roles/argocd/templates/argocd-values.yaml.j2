@@ -1,0 +1,18 @@
+# ArgoCD の設定
+configs:
+  params:
+    # TLS は Gateway 側で終端するため、server 自身は平文で待ち受ける。
+    # 二重に TLS を張ると HTTPRoute からの接続で証明書エラーになる。
+    server.insecure: true
+
+server:
+  # Ingress は使わない。
+  # ingress-nginx が retire されたため Gateway API + HTTPRoute で公開する。
+  ingress:
+    enabled: false
+
+# 3ノードの homelab では冗長化しない
+controller:
+  replicas: 1
+redis-ha:
+  enabled: false

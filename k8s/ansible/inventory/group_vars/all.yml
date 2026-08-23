@@ -88,3 +88,13 @@ sealed_secrets_version: "2.19.3"    # helm search repo sealed-secrets/sealed-sec
 # 旧環境の秘密鍵が kube-system にあるため、controller も同じ namespace に置く。
 # 場所がずれると復元した鍵を読めず、既存の SealedSecret が復号できなくなる。
 sealed_secrets_namespace: kube-system
+
+# ArgoCD
+argocd_version: "8.6.0"
+
+# Gateway
+gateway_namespace: gateway
+# 旧 ingress-nginx が使っていた IP を踏襲する。
+# DNS レコードと Cloudflare Tunnel の向き先が紐づくため固定する。
+gateway_lb_ip: "192.168.3.200"
+gateway_wildcard_hostname: "*.shooonng.com"
