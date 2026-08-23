@@ -18,11 +18,19 @@
   roles:
     - control_plane
     - cilium
-    - metallb
-    - longhorn
 
 - name: worker のクラスタ参加
   hosts: workers
   become: true
   roles:
     - worker
+
+# ArgoCD が動くまでに必要な基盤。
+# これ以降のアプリケーションは ArgoCD の管轄とする。
+- name: クラスタ基盤の導入
+  hosts: control_plane
+  become: true
+  roles:
+    - metallb
+    - longhorn
+    - sealed_secrets

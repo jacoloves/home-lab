@@ -80,3 +80,9 @@ longhorn_version: "1.10.1"    # helm search repo longhorn/longhorn --versions �
 # スケジュール可能なノードは worker 2台のみ。
 # 3 のままだと常に Degraded になる。
 longhorn_replica_count: 2
+
+# SealedSecrets
+sealed_secrets_version: "2.19.3"    # helm search repo sealed-secrets/sealed-secrets --versions で確認して固定
+# 旧環境の秘密鍵が kube-system にあるため、controller も同じ namespace に置く。
+# 場所がずれると復元した鍵を読めず、既存の SealedSecret が復号できなくなる。
+sealed_secrets_namespace: kube-system
