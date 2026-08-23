@@ -34,3 +34,4 @@
     - metallb
     - longhorn
     - sealed_secrets
+    - cert_manager
