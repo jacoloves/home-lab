@@ -1,0 +1,21 @@
+# 分散ブロックストレージ(Longhorn)の設定
+defaultSettings:
+  # スケジュール可能なノード数に合わせる
+  defaultReplicaCount: {{ longhorn_replica_count }}
+  # ノードのディスクのうち Longhorn が使わずに残す割合。
+  # 40GiB のディスクなので既定の30%だと余裕が少ない。
+  storageReservedPercentageForDefaultDisk: 20
+  # レプリカが2つしかないため、片方が落ちても即座には作り直さず、
+  # ノードの一時的な再起動を待つ
+  replicaReplenishmentWaitInterval: 600
+
+persistence:
+  # このクラスタで唯一のストレージ実装とする
+  defaultClass: true
+  defaultClassReplicaCount: {{ longhorn_replica_count }}
+
+# UI は後で Gateway API 経由で公開する。
+# 現時点では port-forward で確認する。
+service:
+  ui:
+    type: ClusterIP

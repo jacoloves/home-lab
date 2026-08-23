@@ -19,6 +19,7 @@
     - control_plane
     - cilium
     - metallb
+    - longhorn
 
 - name: worker のクラスタ参加
   hosts: workers

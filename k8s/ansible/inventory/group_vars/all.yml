@@ -71,3 +71,12 @@ gateway_api_crds:
   - grpcroutes
   - backendtlspolicies
   - tlsroutes
+
+# Longhorn
+longhorn_version: "1.10.1"    # helm search repo longhorn/longhorn --versions で確認して固定
+
+# レプリカ数は 2。
+# kubeadm では control-plane に NoSchedule の taint が付くため、
+# スケジュール可能なノードは worker 2台のみ。
+# 3 のままだと常に Degraded になる。
+longhorn_replica_count: 2
