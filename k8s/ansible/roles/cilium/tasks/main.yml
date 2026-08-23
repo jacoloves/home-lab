@@ -25,6 +25,20 @@
     mode: "0644"
     owner: root
     group: root
+  register: cilium_values
+
+# Gateway API の CRD は Cilium に同梱されていないため個別に適用する。
+# gatewayAPI.enabled=true より前に入れないと operator がエラーを繰り返す。
+- name: Gateway API の CRD を適用する
+  ansible.builtin.command: >-
+    kubectl apply --server-side -f
+    https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/{{ gateway_api_version }}/config/crd/standard/gateway.networking.k8s.io_{{ item }}.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  loop: "{{ gateway_api_crds }}"
+  # server-side apply は変更の有無を出力から判別できない(常に serverside-applied)。
+  # 適用自体は冪等なため、changed の報告は行わない。
+  changed_when: false
 
 - name: Cilium を導入する
   kubernetes.core.helm:
@@ -38,9 +52,58 @@
     wait: true
     wait_timeout: 10m
 
+# Helm は ConfigMap を更新しても Pod テンプレートが変わらなければ
+# DaemonSet を入れ替えない。kubeProxyReplacement は起動時にしか読まれないため、
+# 実際に走っている agent の状態を見て、乖離していれば再起動する。
+- name: cilium agent の現在の設定を取得する
+  ansible.builtin.command: >-
+    kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: cilium_agent_status
+  changed_when: false
+  failed_when: false
+
+- name: 設定が反映されていなければ cilium を再起動する
+  ansible.builtin.command: >-
+    kubectl -n kube-system rollout restart ds/cilium deployment/cilium-operator
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when:
+    cilium_values.changed
+    or (cilium_kube_proxy_replacement | bool
+        and cilium_agent_status.stdout is not search('KubeProxyReplacement:\s+True'))
+
+- name: cilium の再起動完了を待つ
+  ansible.builtin.command: >-
+    kubectl -n kube-system rollout status ds/cilium --timeout=300s
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
 - name: 全ノードが Ready になるまで待つ
   ansible.builtin.command: >-
     kubectl wait --for=condition=Ready nodes --all --timeout=300s
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   changed_when: false
+
+# Cilium が Service を処理し始めてから削除する。
+# 先に消すと Service への到達が一時的に途切れる。
+- name: kube-proxy の DaemonSet を削除する
+  ansible.builtin.command: >-
+    kubectl -n kube-system delete daemonset kube-proxy --ignore-not-found
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: kube_proxy_ds
+  changed_when: "'deleted' in kube_proxy_ds.stdout"
+  when: cilium_kube_proxy_replacement | bool
+
+- name: kube-proxy の ConfigMap を削除する
+  ansible.builtin.command: >-
+    kubectl -n kube-system delete configmap kube-proxy --ignore-not-found
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: kube_proxy_cm
+  changed_when: "'deleted' in kube_proxy_cm.stdout"
+  when: cilium_kube_proxy_replacement | bool

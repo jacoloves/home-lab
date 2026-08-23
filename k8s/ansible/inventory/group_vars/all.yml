@@ -39,6 +39,11 @@ containerd_pause_image: "registry.k8s.io/pause:3.10.1"
 # 挙動の差分と構成の差分が混ざって切り分けできなくなるため。
 cilium_version: "1.20.1"    # ← 調べた値に置き換える
 
+# kube-proxy を Cilium の eBPF 実装で置き換えるか。
+# Cilium の Gateway API は true が必須のため有効化している。
+# 切り替え後は kube-proxy DaemonSet を削除する。
+cilium_kube_proxy_replacement: true
+
 # Helm 本体。upgrade は creates で抑止されるため、
 # 上げるときは /usr/local/bin/helm を削除してから再適用する。
 helm_version: "3.16.4"
@@ -51,3 +56,18 @@ metallb_ip_range: "192.168.3.200-192.168.3.230"
 
 cert_manager_acme_email: "5511068t@gmail.com"
 cert_manager_dns_zone: "shooonng.com"
+
+# Gateway API
+# Cilium 1.20.1 が要求する版に合わせる。
+# Cilium を上げるときは公式ドキュメントで対応版を確認すること。
+gateway_api_version: "v1.6.1"
+
+# Cilium が管理する CRD 一式(standard チャネル)
+gateway_api_crds:
+  - gatewayclasses
+  - gateways
+  - httproutes
+  - referencegrants
+  - grpcroutes
+  - backendtlspolicies
+  - tlsroutes

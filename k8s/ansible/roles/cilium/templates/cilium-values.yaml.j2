@@ -2,11 +2,10 @@
 # Pod CIDR は kubeadm の podSubnet と一致させる必要がある。
 # 両者の定義元は group_vars/all.yml に集約している。
 
-# 初回は kube-proxy を残したまま導入する。
-# kubeadm 自体が初めての環境に eBPF のデータパス置換を同時に持ち込むと、
-# Service に到達できないときの切り分けが困難になるため。
-# クラスタが安定したあと、別作業として true に切り替える。
-kubeProxyReplacement: false
+# kube-proxy の置き換え。
+# Cilium の Gateway API が必須要件としているため有効化した。
+# Service の実装が iptables から eBPF に変わる。
+kubeProxyReplacement: {{ cilium_kube_proxy_replacement | lower }}
 
 # kube-proxy 経由の解決に依存せず API サーバへ直接到達させる。
 # 起動時のニワトリ卵問題を避けるための指定。
@@ -37,3 +36,9 @@ hubble:
     enabled: true
   ui:
     enabled: true
+
+# Gateway API コントローラ。
+# ingress-nginx が 2026年3月に retire されたため、その代替として使う。
+# CRD は別途適用済みであること。
+gatewayAPI:
+  enabled: true
