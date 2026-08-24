@@ -20,6 +20,11 @@
     values:
       crds:
         enabled: true
+      # DNS-01 の自己検査に内部 DNS を使わせない。
+      # AdGuard で *.shooonng.com を rewrite すると
+      # _acme-challenge の TXT が引けなくなるため。
+      dns01RecursiveNameservers: "1.1.1.1:53,8.8.8.8:53"
+      dns01RecursiveNameserversOnly: true
     kubeconfig: /etc/kubernetes/admin.conf
     wait: true
     wait_timeout: 10m

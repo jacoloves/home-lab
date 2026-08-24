@@ -1,12 +1,6 @@
 # 証明書発行の構成。
 #
-# 2系統ある:
 #   1. letsencrypt-cloudflare  … 公開ホスト向け(DNS-01)
-#   2. k3s-local-ca-issuer     … 内部ホスト向け(自己署名 CA)
-#
-# 「k3s」という名前は k3s 時代の名残だが、CA 証明書は端末に
-# インポート済みのため、改名すると全端末で再登録が必要になる。
-# 実態と名前が合わないことを承知のうえで維持している。
 
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -29,37 +23,3 @@ spec:
         selector:
           dnsZones:
             - {{ cert_manager_dns_zone }}
----
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: selfsigned-issuer
-spec:
-  selfSigned: {}
----
-# CA の秘密鍵と証明書は SealedSecret から復元済み。
-# 仕様が一致していれば cert-manager は既存 Secret を再利用し、
-# 新しい CA を発行しない。
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: k3s-local-ca
-  namespace: cert-manager
-spec:
-  isCA: true
-  commonName: k3s-local-ca
-  secretName: k3s-local-ca-secret
-  privateKey:
-    algorithm: ECDSA
-    size: 256
-  issuerRef:
-    name: selfsigned-issuer
-    kind: ClusterIssuer
----
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: k3s-local-ca-issuer
-spec:
-  ca:
-    secretName: k3s-local-ca-secret

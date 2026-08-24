@@ -98,3 +98,8 @@ gateway_namespace: gateway
 # DNS レコードと Cloudflare Tunnel の向き先が紐づくため固定する。
 gateway_lb_ip: "192.168.3.200"
 gateway_wildcard_hostname: "*.shooonng.com"
+
+# Ansible の接続鍵。
+# ssh-agent に依存すると、エージェントが空のときに全ノード
+# UNREACHABLE になるため明示的に指定する。
+ansible_ssh_private_key_file: "~/.ssh/id_ed25519_mgmt"
