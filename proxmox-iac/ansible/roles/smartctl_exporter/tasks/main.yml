@@ -1,0 +1,50 @@
+# SMART メトリクスの公開
+#
+# node_exporter は SMART を収集しないため専用の exporter を使う。
+# textfile + スクリプト方式より管理対象が少ない。
+---
+- name: smartmontools を導入する
+  ansible.builtin.apt:
+    name: smartmontools
+    state: present
+
+- name: バイナリを配置する
+  ansible.builtin.unarchive:
+    src: >-
+      https://github.com/prometheus-community/smartctl_exporter/releases/download/v{{ smartctl_exporter_version }}/smartctl_exporter-{{ smartctl_exporter_version }}.linux-amd64.tar.gz
+    dest: /usr/local/bin
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+      - "smartctl_exporter-{{ smartctl_exporter_version }}.linux-amd64/smartctl_exporter"
+    mode: "0755"
+    owner: root
+    group: root
+    creates: /usr/local/bin/smartctl_exporter
+
+- name: systemd ユニットを配置する
+  # SMART の取得には root 権限が必要なため root で実行する
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/smartctl_exporter.service
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Unit]
+      Description=smartctl exporter
+      After=network-online.target
+
+      [Service]
+      ExecStart=/usr/local/bin/smartctl_exporter --web.listen-address=:{{ smartctl_exporter_port }}
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Restart smartctl_exporter
+
+- name: smartctl_exporter を有効化する
+  ansible.builtin.systemd:
+    name: smartctl_exporter
+    enabled: true
+    state: started
+    daemon_reload: true

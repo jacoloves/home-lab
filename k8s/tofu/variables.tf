@@ -77,3 +77,8 @@ variable "vm_nodes" {
     disk   = number
   }))
 }
+
+variable "proxmox_ssh_private_key_path" {
+  description = "Proxmox root への SSH 秘密鍵のパス"
+  type        = string
+}

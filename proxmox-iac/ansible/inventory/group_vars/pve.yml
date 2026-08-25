@@ -1,0 +1,9 @@
+# Proxmox ホストの監視設定
+---
+# smartctl_exporter のバージョン。
+# https://github.com/prometheus-community/smartctl_exporter/releases で確認して固定する
+smartctl_exporter_version: "0.14.0"
+smartctl_exporter_port: 9633
+
+# Prometheus が mgmt host から scrape するため、LAN に公開する
+node_exporter_listen: "0.0.0.0:9100"

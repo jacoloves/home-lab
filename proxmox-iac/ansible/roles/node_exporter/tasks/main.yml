@@ -1,0 +1,34 @@
+# ホストのメトリクス公開
+---
+- name: node_exporter を導入する
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: 起動オプションを設定する
+  # systemd コレクタは既定で無効。サービス停止の検知に必要。
+  # textfile コレクタは独自メトリクスの取り込み先として用意しておく。
+  ansible.builtin.copy:
+    dest: /etc/default/prometheus-node-exporter
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      ARGS="--collector.systemd --collector.textfile.directory=/var/lib/prometheus/node-exporter"
+  notify: Restart node_exporter
+
+- name: textfile ディレクトリを作成する
+  ansible.builtin.file:
+    path: /var/lib/prometheus/node-exporter
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: node_exporter を有効化する
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started

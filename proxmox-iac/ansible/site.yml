@@ -1,0 +1,11 @@
+# Proxmox ホストの構成管理
+#
+# 実行:
+#   make check
+#   make apply
+---
+- name: Proxmox ホストの監視設定
+  hosts: pve
+  roles:
+    - node_exporter
+    - smartctl_exporter

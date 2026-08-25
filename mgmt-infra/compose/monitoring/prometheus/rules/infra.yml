@@ -61,6 +61,16 @@ groups:
         annotations:
           summary: "{{ $labels.instance }} の空きメモリが10%未満です"
 
+      - alert: VzdumpBackupStale
+        # 日次バックアップなので36時間を閾値とする。
+        # 1回の失敗では鳴らず、2回連続で失敗すると鳴る。
+        expr: time() - vzdump_last_backup_timestamp_seconds > 36 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "VM {{ $labels.vmid }} のバックアップが36時間以上更新されていない"
+
   - name: services
     rules:
       - alert: AdGuardHomeDown
@@ -80,3 +90,5 @@ groups:
           severity: critical
         annotations:
           summary: "Docker が停止しています"
+
+

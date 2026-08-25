@@ -64,4 +64,19 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox:9115
+    
+  # Proxmox ホストのメトリクス。
+  # 前回の障害では ICMP は通るのにディスクが死んでいたため、
+  # 死活監視だけでは不十分だと判明した。
+  - job_name: node-pve
+    static_configs:
+      - targets: ['192.168.3.100:9100']
+        labels:
+          instance: proxmox-home
 
+  # SMART。node_exporter は収集しないため専用 exporter を使う。
+  - job_name: smartctl
+    static_configs:
+      - targets: ['192.168.3.100:9633']
+        labels:
+          instance: proxmox-home
