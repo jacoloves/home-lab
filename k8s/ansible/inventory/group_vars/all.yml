@@ -103,3 +103,7 @@ gateway_wildcard_hostname: "*.shooonng.com"
 # ssh-agent に依存すると、エージェントが空のときに全ノード
 # UNREACHABLE になるため明示的に指定する。
 ansible_ssh_private_key_file: "~/.ssh/id_ed25519_mgmt"
+
+# Longhorn のバックアップ先。
+# vzdump(VM 全体)とは別に、ボリューム単位で戻せる経路を用意する。
+longhorn_backup_target: "nfs://192.168.3.11:/srv/longhorn-backup"

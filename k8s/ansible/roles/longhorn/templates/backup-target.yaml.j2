@@ -1,0 +1,13 @@
+# バックアップ先。
+# Longhorn の新しいバージョンでは Setting ではなく
+# BackupTarget カスタムリソースで指定する。
+apiVersion: longhorn.io/v1beta2
+kind: BackupTarget
+metadata:
+  name: default
+  namespace: longhorn-system
+spec:
+  backupTargetURL: {{ longhorn_backup_target }}
+  # NFS なので認証情報は不要
+  credentialSecret: ""
+  pollInterval: 5m0s

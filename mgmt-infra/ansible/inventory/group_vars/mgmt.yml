@@ -19,3 +19,6 @@ docker_log_max_size: "10m"
 docker_log_max_file: "3"
 
 mgmt_ip: 192.168.3.11
+
+# vzdump の鮮度を監視する対象 VM
+vzdump_watch_vmids: [201, 211, 212]

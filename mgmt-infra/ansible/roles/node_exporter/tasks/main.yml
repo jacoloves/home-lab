@@ -1,0 +1,94 @@
+# メトリクス公開。
+# 手動導入されていたものを構成管理下に置く。
+---
+- name: node_exporter を導入する
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: 起動オプションを設定する
+  # systemd コレクタはサービス停止の検知に必要。
+  # textfile コレクタは vzdump の鮮度など独自メトリクスの取り込み先。
+  ansible.builtin.copy:
+    dest: /etc/default/prometheus-node-exporter
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      ARGS="--collector.systemd --collector.textfile.directory=/var/lib/prometheus/node-exporter --web.listen-address=192.168.3.11:9100"
+  notify: Restart node_exporter
+
+- name: textfile ディレクトリを作成する
+  ansible.builtin.file:
+    path: /var/lib/prometheus/node-exporter
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: vzdump の鮮度を収集するスクリプトを配置する
+  # ジョブの成否ではなくファイルの実在と更新時刻を見る。
+  # ジョブが起動しなかったケースも検知できる。
+  ansible.builtin.copy:
+    dest: /usr/local/bin/vzdump-metrics.sh
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      OUT=/var/lib/prometheus/node-exporter/vzdump.prom
+      TMP="${OUT}.$$"
+      {
+        echo '# HELP vzdump_last_backup_timestamp_seconds 最新バックアップの更新時刻'
+        echo '# TYPE vzdump_last_backup_timestamp_seconds gauge'
+        echo '# HELP vzdump_last_backup_bytes 最新バックアップのサイズ'
+        echo '# TYPE vzdump_last_backup_bytes gauge'
+        for vmid in {{ vzdump_watch_vmids | join(' ') }}; do
+          f=$(ls -t /srv/pve-backup/dump/vzdump-qemu-${vmid}-*.vma.zst 2>/dev/null | head -1 || true)
+          if [ -n "$f" ]; then
+            printf 'vzdump_last_backup_timestamp_seconds{vmid="%s"} %s\n' "$vmid" "$(stat -c %Y "$f")"
+            printf 'vzdump_last_backup_bytes{vmid="%s"} %s\n' "$vmid" "$(stat -c %s "$f")"
+          else
+            printf 'vzdump_last_backup_timestamp_seconds{vmid="%s"} 0\n' "$vmid"
+          fi
+        done
+      } > "$TMP"
+      mv "$TMP" "$OUT"
+
+- name: 収集用の systemd unit と timer を配置する
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ item.name }}"
+    mode: "0644"
+    owner: root
+    group: root
+    content: "{{ item.content }}"
+  loop:
+    - name: vzdump-metrics.service
+      content: |
+        [Unit]
+        Description=vzdump freshness metrics
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/bin/vzdump-metrics.sh
+    - name: vzdump-metrics.timer
+      content: |
+        [Unit]
+        Description=vzdump freshness metrics timer
+
+        [Timer]
+        OnBootSec=2min
+        OnUnitActiveSec=15min
+
+        [Install]
+        WantedBy=timers.target
+
+- name: timer を有効化する
+  ansible.builtin.systemd:
+    name: vzdump-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true

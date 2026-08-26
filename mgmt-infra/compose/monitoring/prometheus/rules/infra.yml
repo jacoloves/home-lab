@@ -71,6 +71,41 @@ groups:
         annotations:
           summary: "VM {{ $labels.vmid }} のバックアップが36時間以上更新されていない"
 
+      - alert: NvmeCriticalWarning
+        # コントローラが自己申告する異常。0以外は即対応が必要
+        expr: smartctl_device_critical_warning > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.device }} が critical warning を報告しています"
+
+      - alert: NvmeWearHigh
+        # 摩耗はゆっくり進むので早期に気づける
+        expr: smartctl_device_percentage_used > 80
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} の摩耗が80%を超えました"
+
+      - alert: NvmeTemperatureHigh
+        # 小型筐体は M.2 の風が通りにくく、サーマルスロットリングの前兆になる
+        expr: smartctl_device_temperature{temperature_type="current"} > 70
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} の温度が70℃を超えています"
+
+      - alert: NvmeUnsafeShutdown
+        # 意図しない電断の検知。前回の故障の寄与要因候補だった
+        expr: increase(smartctl_device_unsafe_shutdowns[1h]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} で意図しない電断が発生しました"
+
   - name: services
     rules:
       - alert: AdGuardHomeDown

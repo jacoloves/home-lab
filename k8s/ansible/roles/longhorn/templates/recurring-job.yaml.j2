@@ -1,0 +1,16 @@
+# 日次バックアップ。
+# vzdump が 03:00 なので、I/O が競合しないよう 04:00 にずらす。
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: daily-backup
+  namespace: longhorn-system
+spec:
+  cron: "0 4 * * *"
+  task: backup
+  # default グループは、個別指定の無いボリュームすべてに適用される。
+  # 新しい PVC を作っても自動的に対象になる。
+  groups:
+    - default
+  retain: 7
+  concurrency: 1

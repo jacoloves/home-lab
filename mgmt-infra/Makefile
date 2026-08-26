@@ -3,6 +3,9 @@
 
 ANSIBLE_DIR := ansible
 
+MONITORING_DIR := compose/monitoring
+PROM_IMAGE     := prom/prometheus:v3.1.0
+
 help: ## ヘルプを表示する
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -36,3 +39,16 @@ monitoring-down: ## 監視スタックを停止する
 
 monitoring-logs: ## 監視スタックのログを表示する
 	cd compose/monitoring && docker compose logs -f --tail 50
+
+## Prometheus の設定とルールを検証する
+.PHONY: check-prometheus
+check-prometheus:
+	docker run --rm -v "$(PWD)/$(MONITORING_DIR)/prometheus:/cfg" \
+		--entrypoint promtool $(PROM_IMAGE) check config /cfg/prometheus.yml
+	docker run --rm -v "$(PWD)/$(MONITORING_DIR)/prometheus:/cfg" \
+		--entrypoint sh $(PROM_IMAGE) -c 'promtool check rules /cfg/rules/*.yml'
+
+## 設定を再読み込みする
+.PHONY: reload-prometheus
+reload-prometheus:
+	curl -sf -X POST http://127.0.0.1:9090/-/reload && echo "reloaded"
