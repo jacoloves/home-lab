@@ -34,12 +34,70 @@
       ExecStart=/usr/bin/prometheus-node-exporter \
         --collector.systemd \
         --collector.processes \
+        --collector.textfile.directory={{ node_exporter_textfile_dir }} \
         --web.listen-address={{ mgmt_ip }}:9100
   notify: Restart node exporter
 
 - name: サービス node_exporter を有効化する
   ansible.builtin.systemd:
     name: prometheus-node-exporter
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: textfile コレクタのディレクトリを作成する
+  ansible.builtin.file:
+    path: "{{ node_exporter_textfile_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+# vzdump はジョブの成否をローカル root 宛メールにしか通知しないため、
+# 成果物(バックアップファイル)の実在と更新時刻を直接計測する。
+# ジョブが起動しなかったケースも検知できる。
+- name: バックアップ鮮度の収集スクリプトを配置する
+  ansible.builtin.template:
+    src: vzdump-metrics.sh.j2
+    dest: /usr/local/bin/vzdump-metrics.sh
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: 収集用の systemd ユニットを配置する
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/vzdump-metrics.service
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Unit]
+      Description=vzdump backup freshness metrics
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/vzdump-metrics.sh
+
+- name: 収集用の systemd タイマーを配置する
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/vzdump-metrics.timer
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Unit]
+      Description=vzdump backup freshness metrics timer
+
+      [Timer]
+      OnBootSec=2min
+      OnUnitActiveSec=15min
+
+      [Install]
+      WantedBy=timers.target
+
+- name: 収集タイマーを有効化する
+  ansible.builtin.systemd:
+    name: vzdump-metrics.timer
     enabled: true
     state: started
     daemon_reload: true
