@@ -11,6 +11,7 @@
     - common
     - containerd
     - kubernetes
+    - node_exporter
 
 - name: control-plane の初期化
   hosts: control_plane

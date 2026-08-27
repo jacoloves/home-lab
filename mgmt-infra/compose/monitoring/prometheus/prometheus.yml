@@ -80,3 +80,26 @@ scrape_configs:
       - targets: ['192.168.3.100:9633']
         labels:
           instance: proxmox-home
+
+  # k8s ノードのリソース。
+  # 死活は blackbox でなく node_exporter の up で見る(pull なので自己申告不要)。
+  - job_name: node-k8s
+    static_configs:
+      - targets: ['192.168.3.101:9100']
+        labels:
+          instance: k8s-cp-01
+      - targets: ['192.168.3.111:9100']
+        labels:
+          instance: k8s-worker-01
+      - targets: ['192.168.3.112:9100']
+        labels:
+          instance: k8s-worker-02
+
+  # クラスタ内オブジェクトの状態(Pod, Deployment, PVC など)。
+  # Gateway 経由なので TLS は Let's Encrypt の正規証明書。
+  - job_name: kube-state-metrics
+    scheme: https
+    static_configs:
+      - targets: ['ksm.shooonng.com']
+        labels:
+          instance: k8s-cluster
