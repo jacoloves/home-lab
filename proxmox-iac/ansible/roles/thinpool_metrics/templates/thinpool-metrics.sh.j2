@@ -1,0 +1,30 @@
+#!/bin/bash
+# LVM thin pool の使用率を Prometheus に公開する。
+# node_exporter は thin pool のメトリクスを持たず専用 exporter も無いため、
+# lvs の出力を textfile 経由で取り込む。
+# このファイルは Ansible が生成する。
+set -euo pipefail
+
+OUT={{ node_exporter_textfile_dir }}/thinpool.prom
+TMP="${OUT}.$$"
+
+{
+  echo '# HELP lvm_thinpool_data_percent thin pool のデータ使用率'
+  echo '# TYPE lvm_thinpool_data_percent gauge'
+  echo '# HELP lvm_thinpool_metadata_percent thin pool のメタデータ使用率'
+  echo '# TYPE lvm_thinpool_metadata_percent gauge'
+
+  lvs --noheadings --nosuffix \
+      -o vg_name,lv_name,lv_attr,data_percent,metadata_percent 2>/dev/null |
+  while read -r vg lv attr data meta; do
+    # lv_attr の先頭が t のものが thin pool
+    case "$attr" in
+      t*)
+        printf 'lvm_thinpool_data_percent{vg="%s",lv="%s"} %s\n' "$vg" "$lv" "${data:-0}"
+        printf 'lvm_thinpool_metadata_percent{vg="%s",lv="%s"} %s\n' "$vg" "$lv" "${meta:-0}"
+        ;;
+    esac
+  done
+} > "$TMP"
+
+mv "$TMP" "$OUT"

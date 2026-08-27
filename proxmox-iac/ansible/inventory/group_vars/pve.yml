@@ -7,3 +7,6 @@ smartctl_exporter_port: 9633
 
 # Prometheus が mgmt host から scrape するため、LAN に公開する
 node_exporter_listen: "0.0.0.0:9100"
+
+# node_exporter の textfile コレクタが読むディレクトリ
+node_exporter_textfile_dir: /var/lib/prometheus/node-exporter

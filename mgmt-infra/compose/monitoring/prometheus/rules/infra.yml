@@ -106,6 +106,24 @@ groups:
         annotations:
           summary: "{{ $labels.device }} で意図しない電断が発生しました"
 
+      - alert: ThinPoolAlmostFull
+        # 満杯になると thin pool 上の全 VM が同時に破損する
+        expr: lvm_thinpool_data_percent > 85
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.vg }}/{{ $labels.lv }} の使用率が85%を超えました"
+
+      - alert: ThinPoolMetadataAlmostFull
+        # メタデータ枯渇でも同様に壊れる。見落としやすい
+        expr: lvm_thinpool_metadata_percent > 85
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.vg }}/{{ $labels.lv }} のメタデータ使用率が85%を超えました"
+
   - name: services
     rules:
       - alert: AdGuardHomeDown

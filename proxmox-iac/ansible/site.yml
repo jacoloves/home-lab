@@ -9,3 +9,4 @@
   roles:
     - node_exporter
     - smartctl_exporter
+    - thinpool_metrics

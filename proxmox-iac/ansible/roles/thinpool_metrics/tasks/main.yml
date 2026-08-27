@@ -1,0 +1,47 @@
+# LVM thin pool の使用率監視
+---
+- name: 収集スクリプトを配置する
+  ansible.builtin.template:
+    src: thinpool-metrics.sh.j2
+    dest: /usr/local/bin/thinpool-metrics.sh
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: 収集用の systemd ユニットを配置する
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/thinpool-metrics.service
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Unit]
+      Description=LVM thin pool usage metrics
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/thinpool-metrics.sh
+
+- name: 収集用の systemd タイマーを配置する
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/thinpool-metrics.timer
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Unit]
+      Description=LVM thin pool usage metrics timer
+
+      [Timer]
+      OnBootSec=1min
+      OnUnitActiveSec=5min
+
+      [Install]
+      WantedBy=timers.target
+
+- name: 収集タイマーを有効化する
+  ansible.builtin.systemd:
+    name: thinpool-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true
