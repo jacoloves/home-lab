@@ -32,4 +32,13 @@
       labels: ["renovate", "major-update"],
     },
   ],
+
+  // k8sマニフェストのイメージタグを更新対象にする
+  kubernetes: {
+    managerFilePatterns: ["/^apps/.+\\.ya?ml$/"],
+  },
+  // ArgoCDのApplicationが参照するchartのバージョンを更新対象にする
+  argocd: {
+    managerFilePatterns: ["/^apps/.+\\.ya?ml$/"],
+  },
 }
