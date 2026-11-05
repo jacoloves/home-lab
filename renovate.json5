@@ -1,0 +1,35 @@
+{
+  // 設定ファイルの検証用スキーマ
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // 推奨設定をベースにする。GitHub ActionsはSHAで固定する(供給網攻撃への対策)
+  extends: ["config:recommended", "helpers:pinGitHubActionDigests"],
+
+  // スケジュールは日本時間で解釈する
+  timezone: "Asia/Tokyo",
+
+  // 通常の更新PRは週1回(月曜の朝6時前)にまとめて作る
+  schedule: ["before 6am on monday"],
+
+  // 同時に開くPRの上限。レビューが追いつく数にしておく
+  prConcurrentLimit: 5,
+
+  // 全PRに付けるラベル
+  labels: ["renovate"],
+
+  // 脆弱性のある依存の更新PRは、スケジュールを待たずに作る
+  vulnerabilityAlerts: {
+    labels: ["security"],
+  },
+
+  // OSVデータベースの脆弱性情報も使う(Mend Renovate App での対応状況は公式ドキュメントで確認)
+  osvVulnerabilityAlerts: true,
+
+  packageRules: [
+    {
+      // メジャー更新は破壊的変更を含むため、ラベルを付けて目立たせる
+      matchUpdateTypes: ["major"],
+      labels: ["renovate", "major-update"],
+    },
+  ],
+}
